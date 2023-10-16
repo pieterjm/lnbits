@@ -1,6 +1,7 @@
 import asyncio
-from typing import Dict
+from typing import Dict, Optional
 
+import uuid
 import httpx
 from loguru import logger
 
@@ -29,6 +30,18 @@ api_invoice_listeners: Dict[str, asyncio.Queue] = SseListenersDict(
     "api_invoice_listeners"
 )
 
+websocket_listeners: Dict[str, asyncio.Queue] = SseListenersDict(
+    "websocket_listeners"
+)
+
+def register_websocket_listener(send_chan: asyncio.Queue, name: Optional[str] = None):
+    """
+    A method intended for extensions (and core/tasks.py) to call when they want to be
+    notified about new websocket message is incoming. Will emit all incoming messages.
+    """
+    name_unique = f"{name or 'no_name'}_{str(uuid.uuid4())[:8]}"
+    logger.trace(f"sse: registering WebSocket listener {name_unique}")
+    websocket_listeners[name_unique] = send_chan
 
 def register_killswitch():
     """

@@ -97,7 +97,6 @@ def register_invoice_listener(send_chan: asyncio.Queue, name: Optional[str] = No
     logger.trace(f"sse: registering invoice listener {name_unique}")
     invoice_listeners[name_unique] = send_chan
 
-
 async def webhook_handler():
     """
     Returns the webhook_handler for the selected wallet if present. Used by API.

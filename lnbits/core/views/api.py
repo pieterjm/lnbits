@@ -109,7 +109,10 @@ from ..services import (
     websocketManager,
     websocketUpdater,
 )
-from ..tasks import api_invoice_listeners
+from ..tasks import (
+    api_invoice_listeners,
+    websocket_listeners,
+)
 
 api_router = APIRouter()
 
@@ -740,7 +743,19 @@ async def websocket_connect(websocket: WebSocket, item_id: str):
     await websocketManager.connect(websocket, item_id)
     try:
         while True:
-            await websocket.receive_text()
+            data = await websocket.receive_text()
+            if data == 'ping':
+                logger.trace(f"Got ping on WebSocket: {item_id}")
+                await websocket.send_text('pong')
+            for chan_name, send_chan in list(websocket_listeners.items()):
+                if chan_name.startswith(f"{item_id}_"):
+                    try:
+                        logger.debug(f"sending message to {chan_name}")
+                        send_chan.put_nowait(data)
+                    except asyncio.QueueFull:
+                        logger.error(f"removing websocket listener {send_chan}:{chan_name}")
+                        websocket_listeners.pop(chan_name)
+                
     except WebSocketDisconnect:
         websocketManager.disconnect(websocket)
 
